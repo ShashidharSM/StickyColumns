@@ -3,6 +3,7 @@
 Organize sticky notes in columns. 100% local (no servers), React + CDN, single file.
 
 Sticky Columns is a simple board to manage and plan your tasks; this is a standalone board I use to track my projects and tasks as a freelancer. Your data is saved locally, and resources are fetched from CDN, elminitaing any prior setup. 
+Works best on a wide screen monitor - Responsive version coming soon.
 
 ## Features
 - Add/rename/delete columns (max 10), drag to reorder
