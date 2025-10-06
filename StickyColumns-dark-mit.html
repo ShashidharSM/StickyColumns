@@ -341,27 +341,5 @@
     const root = ReactDOM.createRoot(document.getElementById('app-root'));
     root.render(<><App /><SiteFooter /></>);
   </script>
-
-  <!-- ====== HOW TO RUN ======
-  Quick Run (needs internet for the CDN scripts):
-  1) Save this file as index.html
-  2) Double-click to open in your browser
-
-  Local/Offline Options:
-  A) Keep single-file workflow using local vendor scripts
-     1) Download these files next to index.html:
-        - react.production.min.js (React 18 UMD)
-        - react-dom.production.min.js (ReactDOM 18 UMD)
-        - babel.min.js (babel-standalone)
-     2) Replace the three <script> tags at the top to point to the local copies.
-
-  B) "No Babel" build (faster, no CDN) – if you’re comfortable with a one-time build:
-     1) Create a folder and run:  npm create vite@latest sticky-columns -- --template react
-     2) Move the JSX into /src (e.g., App.jsx). Remove the Babel CDN from index.html.
-     3) Run:  npm install  &&  npm run build
-     4) Open dist/index.html in a browser (fully offline).
-
-  Privacy: All data is stored in localStorage under key "sticky-columns:v1". Theme preference stored in "sticky-columns:theme".
-  =========================== -->
 </body>
 </html>
