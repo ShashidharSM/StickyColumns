@@ -230,7 +230,7 @@
                       draggable
                       onDragStart={onNoteDragStart(col.id, note.id)}
                       onDelete={()=> deleteNote(col.id, note.id)}
-                      onChange={(text)=> updateNote(col.id, noteId, text)}
+                      onChange={(text)=> updateNote(col.id, note.id, text)}
                     />
                   ))}
                 </Column>
@@ -253,8 +253,8 @@
             ) : (
               <div className="col-title" onDoubleClick={()=> setEditing(true)} title="Double-click to rename">{column.name}</div>
             )}
-            <ColorPicker value={column.color} onChange={onColor} />
             <button className="icon" title="Rename" onClick={()=> setEditing(true)}>✏️</button>
+            <ColorPicker value={column.color} onChange={onColor} />
             <button className="icon" title="Add note" onClick={onAddNote}>➕</button>
             <button className="icon" title="Delete column" onClick={onDelete}>🗑️</button>
           </div>
