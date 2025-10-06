@@ -1,0 +1,367 @@
+<!doctype html>
+<!--
+  Sticky Columns – One Page Organizer
+  License: MIT
+  Copyright (c) 2025 Shashi Murthy
+-->
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sticky Columns – One Page Organizer</title>
+  <meta name="description" content="Organize sticky notes in columns. 100% local. No servers." />
+  <meta name="color-scheme" content="light dark" />
+  <!-- React (CDN). For fully-offline use, see instructions below to replace with local files. -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel to allow JSX in this single file. Replace with prebuilt JS or local babel-standalone for offline. -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root{
+      --bg:#f5f5f5; --fg:#111; --muted:#6b7280; --border:#e5e7eb; --ring:#a3a3a3;
+      --card:#fff; --panel-bg:rgba(255,255,255,.8);
+      --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 12px rgba(0,0,0,.03);
+      --radius:16px;
+    }
+    :root[data-theme="dark"]{
+      --bg:#0f172a; /* slate-900 */ 
+      --fg:#e5e7eb; /* zinc-200 */ 
+      --muted:#9ca3af; 
+      --border:#334155; 
+      --ring:#a3a3a3;
+      --card:#111827; /* gray-900 */
+      --panel-bg:rgba(17,24,39,.85); /* card-ish translucent */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    header{position:sticky;top:0;backdrop-filter:saturate(180%) blur(8px);background:var(--panel-bg);border-bottom:1px solid var(--border);z-index:5}
+    .wrap{max-width:100%;margin:0 auto;padding:8px 12px}
+    h1{margin:0;font-size:22px;font-weight:650}
+    .row{display:flex;gap:8px;align-items:center}
+    .ml-auto{margin-left:auto}
+    .btn{padding:8px 12px;border:1px solid var(--border);border-radius:12px;background:var(--card);box-shadow:var(--shadow);font-size:14px;cursor:pointer;color:var(--fg)}
+    .btn:hover{box-shadow:0 2px 6px rgba(0,0,0,.15)}
+    .btn[disabled]{opacity:.5;cursor:not-allowed}
+    .btn-danger{background:#2b1616;border-color:#7f1d1d;color:#fca5a5}
+    .grid{display:grid;gap:12px}
+    .col{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:240px}
+    .col-header{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    .col-title{font-weight:600;font-size:16px;flex:1;cursor:default}
+    .icon{border:0;background:transparent;cursor:pointer;font-size:16px;opacity:.8;color:var(--fg)}
+    .icon:hover{opacity:1}
+    .field{padding:6px 8px;border:1px solid var(--border);border-radius:10px;font-size:14px;width:100%;background:transparent;color:var(--fg)}
+    .droppable{min-height:120px;border:1px dashed var(--border);border-radius:12px;padding:6px}
+    .space-2 > *{margin-bottom:8px}
+    .note{border:1px solid transparent;border-radius:12px;padding:10px;box-shadow:var(--shadow);cursor:grab;color:#111}
+    .note:active{cursor:grabbing}
+    .note .foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+    .badge{font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:999px;background:#fafafa;color:#111}
+    :root[data-theme="dark"] .badge{background:#1f2937;color:#e5e7eb;border-color:#374151}
+    :root[data-theme="dark"] .note{box-shadow:none}
+
+    /* Sticky colors */
+    .yellow{background:#FEF3C7;border-color:#FDE68A}
+    .pink{background:#FCE7F3;border-color:#FBCFE8}
+    .green{background:#DCFCE7;border-color:#BBF7D0}
+    .blue{background:#DBEAFE;border-color:#BFDBFE}
+    .purple{background:#EDE9FE;border-color:#DDD6FE}
+
+    .pill{width:20px;height:20px;border-radius:999px;border:1px solid #ddd;display:inline-block}
+    .ring{outline:2px solid var(--ring)}
+
+    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:80px 0}
+    .muted{color:var(--muted)}
+
+    footer{border-top:1px solid var(--border);background:var(--panel-bg)}
+    footer .wrap{padding-top:8px;padding-bottom:8px}
+    footer a{color:inherit;text-decoration:none}
+    footer a:hover{text-decoration:underline}
+    time{font-variant-numeric:tabular-nums}
+
+    @media (max-width: 640px){ .wrap{padding:8px} }
+  </style>
+  <script>
+    // Set initial theme ASAP to avoid flash
+    (function() {
+      try {
+        const key = 'sticky-columns:theme';
+        const saved = localStorage.getItem(key);
+        let theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch(_) {}
+    })();
+  </script>
+</head>
+<body>
+  <header>
+    <div class="wrap row">
+      <h1>Sticky Columns</h1>
+      <span class="muted" style="font-size:12px">(local & private – no servers)</span>
+      <div class="ml-auto row">
+        <button class="btn" id="themeBtn" title="Toggle dark mode">🌙/☀️</button>
+        <button class="btn" id="addColBtn">+ Column</button>
+        <button class="btn" id="exportBtn">Export</button>
+        <label class="btn" style="cursor:pointer">Import
+          <input type="file" id="importInput" accept="application/json" style="display:none" />
+        </label>
+        <button class="btn btn-danger" id="clearBtn">Clear Board</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" id="app-root"></main>
+  
+  <footer>
+    <div class="wrap row" style="justify-content:space-between">
+      <time id="footer-datetime" class="muted"></time>
+      <a id="footer-link" href="#" target="_blank" rel="noopener">yourwebsite.com</a>
+    </div>
+  </footer>
+
+  <script type="text/babel">
+    const { useEffect, useRef, useState } = React;
+
+    const MAX_COLS = 10;
+    // ===== Footer config: set your website URL/text here =====
+    const WEBSITE_URL = "https://imshashi.com"; // <-- change to your site
+    const WEBSITE_TEXT = "imshashi.com"; // <-- link label
+    const STORAGE_KEY = "sticky-columns:v1";
+    const THEME_KEY = "sticky-columns:theme";
+
+    function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); }
+    function randomColor(){ return ["yellow","pink","green","blue","purple"][Math.floor(Math.random()*5)]; }
+
+    function App(){
+      const [data, setData] = useState(() => {
+        try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) return JSON.parse(raw); }catch{}
+        return { columns:[
+          { id:uid(), name:"To Do", color:"yellow", notes:[ {id:uid(), text:"Click a note to edit"}, {id:uid(), text:"Drag me to another column"} ] },
+          { id:uid(), name:"Doing", color:"pink", notes:[] },
+          { id:uid(), name:"Done", color:"green", notes:[] },
+        ]};
+      });
+
+      useEffect(()=>{ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch{} }, [data]);
+
+      // column ops
+      const addColumn = ()=> setData(d=> {
+        if(d.columns.length >= MAX_COLS){ alert(`Maximum of ${MAX_COLS} columns.`); return d; }
+        return ({...d, columns:[...d.columns, {id:uid(), name:`Column ${d.columns.length+1}`, color:randomColor(), notes:[]}]});
+      });
+      const setColumnName = (id,name)=> setData(d=> ({...d, columns:d.columns.map(c=> c.id===id? {...c, name} : c)}));
+      const setColumnColor = (id,color)=> setData(d=> ({...d, columns:d.columns.map(c=> c.id===id? {...c, color} : c)}));
+      const deleteColumn = (id)=> setData(d=> ({...d, columns:d.columns.filter(c=> c.id!==id)}));
+
+      // note ops
+      const addNote = (colId,text="")=> setData(d=> ({...d, columns:d.columns.map(c=> c.id===colId? {...c, notes:[...c.notes, {id:uid(), text}]}:c)}));
+      const updateNote = (colId,noteId,text)=> setData(d=> ({...d, columns:d.columns.map(c=> c.id===colId? {...c, notes:c.notes.map(n=> n.id===noteId? {...n, text}:n)}:c)}));
+      const deleteNote = (colId,noteId)=> setData(d=> ({...d, columns:d.columns.map(c=> c.id===colId? {...c, notes:c.notes.filter(n=> n.id!==noteId)}:c)}));
+
+      // note drag & drop
+      const noteDragInfo = useRef(null);
+      const onNoteDragStart = (colId, noteId) => (e)=>{ noteDragInfo.current = { fromColId:colId, noteId }; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData('text/plain', 'note'); };
+      const allowNoteDrop = (e)=> e.preventDefault();
+      const onDropNoteToColumn = (toColId)=> (e)=>{ e.preventDefault(); const info = noteDragInfo.current; if(!info) return; setData(d=>{
+        if(info.fromColId===toColId) return d; const from = d.columns.find(c=> c.id===info.fromColId); const note = from?.notes.find(n=> n.id===info.noteId); if(!note) return d;
+        return { ...d, columns: d.columns.map(c=> {
+          if(c.id===info.fromColId) return {...c, notes:c.notes.filter(n=> n.id!==info.noteId)};
+          if(c.id===toColId) return {...c, notes:[...c.notes, note]};
+          return c; }) };
+      }); noteDragInfo.current=null; };
+
+      // column drag & drop (reorder)
+      const colDragInfo = useRef(null);
+      const onColDragStart = (fromIndex)=> (e)=>{ colDragInfo.current = { fromIndex }; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/column', String(fromIndex)); };
+      const onColDragOver = (overIndex)=> (e)=>{ if(Array.from(e.dataTransfer.types).includes('text/column')){ e.preventDefault(); e.dataTransfer.dropEffect='move'; } };
+      const onColDrop = (toIndex)=> (e)=>{ if(!Array.from(e.dataTransfer.types).includes('text/column')) return; e.preventDefault(); const info = colDragInfo.current; if(info==null) return; setData(d=>{
+        if(info.fromIndex===toIndex) return d; const cols=[...d.columns]; const [moved] = cols.splice(info.fromIndex,1); cols.splice(toIndex,0,moved); return {...d, columns: cols};
+      }); colDragInfo.current=null; };
+
+      // top bar buttons wiring + disable add when max
+      useEffect(()=>{
+        const add = ()=> addColumn();
+        const exp = ()=> exportJson();
+        const clr = ()=> resetAll();
+        const impEl = document.getElementById('importInput');
+        const addBtn = document.getElementById('addColBtn');
+        const themeBtn = document.getElementById('themeBtn');
+
+        document.getElementById('addColBtn').onclick = add;
+        document.getElementById('exportBtn').onclick = exp;
+        document.getElementById('clearBtn').onclick = clr;
+        themeBtn.onclick = ()=> toggleTheme();
+        impEl.onchange = (e)=> { const f = e.target.files?.[0]; if(f) importJson(f); e.target.value=""; };
+        // disable if at max
+        addBtn.disabled = (data.columns.length >= MAX_COLS);
+        return ()=>{ document.getElementById('addColBtn').onclick = null; document.getElementById('exportBtn').onclick=null; document.getElementById('clearBtn').onclick=null; themeBtn.onclick = null; impEl.onchange=null; };
+      },[data]);
+
+      const resetAll = ()=>{ if(confirm("Clear the board? This cannot be undone.")){ setData({columns:[]}); try{ localStorage.removeItem(STORAGE_KEY);}catch{} } };
+      const exportJson = ()=>{ const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='sticky-columns.json'; a.click(); URL.revokeObjectURL(url); };
+      const importJson = (file)=>{ const reader = new FileReader(); reader.onload = ()=>{ try{ const parsed = JSON.parse(reader.result); if(parsed && Array.isArray(parsed.columns)) setData(parsed); else alert('Invalid file format'); }catch{ alert('Invalid JSON'); } }; reader.readAsText(file); };
+
+      return (
+        <div>
+          {data.columns.length===0 ? (
+            <EmptyState onAdd={addColumn} />
+          ) : (
+            <div className="grid" style={{gridTemplateColumns:`repeat(${data.columns.length}, minmax(220px,1fr))`}}>
+              {data.columns.map((col, idx) => (
+                <Column key={col.id}
+                  index={idx}
+                  column={col}
+                  onRename={(name)=> setColumnName(col.id, name)}
+                  onColor={(color)=> setColumnColor(col.id, color)}
+                  onDelete={()=> deleteColumn(col.id)}
+                  onAddNote={()=> addNote(col.id, "")}
+                  // note dnd
+                  onDropNote={onDropNoteToColumn(col.id)}
+                  onAllowNoteDrop={allowNoteDrop}
+                  // column dnd
+                  onColDragStart={onColDragStart(idx)}
+                  onColDragOver={onColDragOver(idx)}
+                  onColDrop={onColDrop(idx)}
+                >
+                  {col.notes.map(note => (
+                    <NoteCard key={note.id}
+                      note={note}
+                      color={col.color}
+                      draggable
+                      onDragStart={onNoteDragStart(col.id, note.id)}
+                      onDelete={()=> deleteNote(col.id, note.id)}
+                      onChange={(text)=> updateNote(col.id, noteId, text)}
+                    />
+                  ))}
+                </Column>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function Column({ index, column, onRename, onColor, onDelete, onAddNote, onDropNote, onAllowNoteDrop, onColDragStart, onColDragOver, onColDrop, children }){
+      const [editing, setEditing] = useState(false);
+      const [name, setName] = useState(column.name);
+      useEffect(()=> setName(column.name), [column.name]);
+      return (
+        <div className="col" onDragOver={onColDragOver} onDrop={onColDrop}>
+          <div className="col-header" draggable onDragStart={onColDragStart} title="Drag header to move column">
+            {editing ? (
+              <input className="field col-title" value={name} onChange={e=> setName(e.target.value)} onBlur={()=> { setEditing(false); onRename(name.trim() || column.name); }} onKeyDown={e=> { if(e.key==='Enter'){ e.currentTarget.blur(); } }} autoFocus />
+            ) : (
+              <div className="col-title" onDoubleClick={()=> setEditing(true)} title="Double-click to rename">{column.name}</div>
+            )}
+            <ColorPicker value={column.color} onChange={onColor} />
+            <button className="icon" title="Rename" onClick={()=> setEditing(true)}>✏️</button>
+            <button className="icon" title="Add note" onClick={onAddNote}>➕</button>
+            <button className="icon" title="Delete column" onClick={onDelete}>🗑️</button>
+          </div>
+          <div className="droppable" onDragOver={onAllowNoteDrop} onDrop={onDropNote}>
+            <div className="space-2">{children}</div>
+          </div>
+        </div>
+      );
+    }
+
+    function NoteCard({ note, color, onDelete, onChange, ...dragProps }){
+      const [editing, setEditing] = useState(note.text.trim()==="");
+      const [text, setText] = useState(note.text);
+      useEffect(()=> setText(note.text), [note.text]);
+      return (
+        <div className={`note ${color}`} {...dragProps}>
+          {editing ? (
+            <textarea className="field" style={{width:'100%', border:'1px solid rgba(0,0,0,0.06)'}} value={text} placeholder="Type your note..." onChange={e=> setText(e.target.value)} onBlur={()=> { setEditing(false); onChange(text); }} onKeyDown={(e)=> { if(e.key==='Enter' && (e.metaKey||e.ctrlKey)) e.currentTarget.blur(); }} rows={3} autoFocus />
+          ) : (
+            <div onClick={()=> setEditing(true)}>
+              <div style={{whiteSpace:'pre-wrap'}}>{note.text || (<em className="muted">(empty)</em>)}</div>
+              <div className="foot">
+                <span className="badge">Drag to move</span>
+                <button className="icon" onClick={onDelete} title="Delete">🗑️</button>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ColorPicker({ value, onChange }){
+      const options = ["yellow","pink","green","blue","purple"];
+      return (
+        <div className="row" style={{gap:4}}>
+          {options.map(c => (
+            <span key={c} className={`pill ${value===c? 'ring':''}`} title={c} style={{background: sampleColor(c).bg, borderColor: sampleColor(c).border}} onClick={()=> onChange(c)}></span>
+          ))}
+        </div>
+      );
+    }
+
+    function EmptyState({ onAdd }){
+      return (
+        <div className="empty">
+          <div style={{fontSize:56}}>🗒️</div>
+          <div style={{fontSize:18,fontWeight:600}}>No columns yet</div>
+          <div className="muted" style={{maxWidth:420,fontSize:14}}>Create your first column. Everything is stored locally in your browser and never leaves your device.</div>
+          <button className="btn" onClick={onAdd}>Create Column</button>
+        </div>
+      );
+    }
+
+    function sampleColor(name){
+      switch(name){
+        case 'yellow': return {bg:'#FEF3C7', border:'#FDE68A'};
+        case 'pink':   return {bg:'#FCE7F3', border:'#FBCFE8'};
+        case 'green':  return {bg:'#DCFCE7', border:'#BBF7D0'};
+        case 'blue':   return {bg:'#DBEAFE', border:'#BFDBFE'};
+        case 'purple': return {bg:'#EDE9FE', border:'#DDD6FE'};
+        default:       return {bg:'#F3F4F6', border:'#E5E7EB'};
+      }
+    }
+
+    function toggleTheme(){
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      try { localStorage.setItem(THEME_KEY, next); } catch {}
+    }
+
+    function SiteFooter(){
+      const { useEffect, useState } = React;
+      const [now, setNow] = useState(new Date());
+      useEffect(()=>{ const id = setInterval(()=> setNow(new Date()), 1000); return ()=> clearInterval(id); },[]);
+      const formatted = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' }).format(now);
+      useEffect(()=>{
+        const t = document.getElementById('footer-datetime'); if(t) t.textContent = formatted;
+        const a = document.getElementById('footer-link'); if(a){ a.href = WEBSITE_URL; a.textContent = WEBSITE_TEXT; }
+      }, [formatted]);
+      return null;
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('app-root'));
+    root.render(<><App /><SiteFooter /></>);
+  </script>
+
+  <!-- ====== HOW TO RUN ======
+  Quick Run (needs internet for the CDN scripts):
+  1) Save this file as index.html
+  2) Double-click to open in your browser
+
+  Local/Offline Options:
+  A) Keep single-file workflow using local vendor scripts
+     1) Download these files next to index.html:
+        - react.production.min.js (React 18 UMD)
+        - react-dom.production.min.js (ReactDOM 18 UMD)
+        - babel.min.js (babel-standalone)
+     2) Replace the three <script> tags at the top to point to the local copies.
+
+  B) "No Babel" build (faster, no CDN) – if you’re comfortable with a one-time build:
+     1) Create a folder and run:  npm create vite@latest sticky-columns -- --template react
+     2) Move the JSX into /src (e.g., App.jsx). Remove the Babel CDN from index.html.
+     3) Run:  npm install  &&  npm run build
+     4) Open dist/index.html in a browser (fully offline).
+
+  Privacy: All data is stored in localStorage under key "sticky-columns:v1". Theme preference stored in "sticky-columns:theme".
+  =========================== -->
+</body>
+</html>
